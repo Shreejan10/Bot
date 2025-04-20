@@ -3,11 +3,12 @@ import hmac
 import hashlib
 import requests
 import pandas as pd
+import os
 from datetime import datetime
 
 # ========== CONFIGURATION ==========
-API_KEY = 'ea2551557fb8c4f4be4b4511b5ff13ddf1ecbb4baf0a13be7c22e8ece8529e4b'
-API_SECRET = 'c6d095fe75bf9405ce2c74e54c8402c02e5433dffe4fa5c45a8688284f8647db'
+API_KEY = os.getenv("API_KEY")
+API_SECRET = os.getenv("API_SECRET")
 BASE_URL = 'https://testnet.binancefuture.com'
 TRADE_SYMBOL = 'BTCUSDT'  # Changed from BTCUSDT to BONKUSDT
 INTERVAL = '15m'
