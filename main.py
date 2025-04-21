@@ -10,7 +10,7 @@ from datetime import datetime
 API_KEY = 'ea2551557fb8c4f4be4b4511b5ff13ddf1ecbb4baf0a13be7c22e8ece8529e4b'
 API_SECRET = 'c6d095fe75bf9405ce2c74e54c8402c02e5433dffe4fa5c45a8688284f8647db'
 BASE_URL = 'https://testnet.binancefuture.com'
-TRADE_SYMBOL = 'BTCUSDT'  # Changed from BTCUSDT to BONKUSDT
+TRADE_SYMBOL = 'BTCUSDT'  # Replace with '1000BONKUSDT' if desired
 INTERVAL = '15m'
 TRADE_USD = 1000
 LEVERAGE = 10
@@ -125,8 +125,7 @@ def place_market_order(side, quantity):
 def get_quantity_for_usd(symbol, usd_amount):
     price = get_price(symbol)
     qty = (usd_amount * LEVERAGE) / price
-    return round(qty, 3)  # 3 decimal places for BTCUSDT
-
+    return round(qty, 3)
 
 
 def run_bot():
@@ -144,7 +143,10 @@ def run_bot():
                 print(f"{datetime.now()} >> Buy Signal Detected")
                 if position_amt < 0:
                     close_position(position_amt)
-                if position_amt == 0:
+                    time.sleep(2)
+                    qty = get_quantity_for_usd(TRADE_SYMBOL, TRADE_USD)
+                    place_market_order("BUY", qty)
+                elif position_amt == 0:
                     qty = get_quantity_for_usd(TRADE_SYMBOL, TRADE_USD)
                     place_market_order("BUY", qty)
 
@@ -152,7 +154,10 @@ def run_bot():
                 print(f"{datetime.now()} >> Sell Signal Detected")
                 if position_amt > 0:
                     close_position(position_amt)
-                if position_amt == 0:
+                    time.sleep(2)
+                    qty = get_quantity_for_usd(TRADE_SYMBOL, TRADE_USD)
+                    place_market_order("SELL", qty)
+                elif position_amt == 0:
                     qty = get_quantity_for_usd(TRADE_SYMBOL, TRADE_USD)
                     place_market_order("SELL", qty)
 
@@ -162,7 +167,7 @@ def run_bot():
         except Exception as e:
             print("❌ Error:", e)
 
-        time.sleep(60 * 15)  # Wait for next 1m candle
+        time.sleep(60 * 15)  # Wait for next 15m candle
 
 
 if __name__ == "__main__":
