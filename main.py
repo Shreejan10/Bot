@@ -10,11 +10,11 @@ API_KEY = 'ea2551557fb8c4f4be4b4511b5ff13ddf1ecbb4baf0a13be7c22e8ece8529e4b'
 API_SECRET = 'c6d095fe75bf9405ce2c74e54c8402c02e5433dffe4fa5c45a8688284f8647db'
 BASE_URL = 'https://testnet.binancefuture.com'
 TRADE_SYMBOL = 'BTCUSDT'
-INTERVAL = '15m'
+INTERVAL = '5m'
 TRADE_USD = 1000
 LEVERAGE = 10
-TAKE_PROFIT_USD = 50
-STOP_LOSS_USD = -20
+TAKE_PROFIT_USD = 100
+STOP_LOSS_USD = -30
 
 # ===================================
 
@@ -179,7 +179,7 @@ def run_bot():
         except Exception as e:
             print("❌ Error:", e)
 
-        time.sleep(60 * 15)  # Wait for next 15m candle
+        time.sleep(60 * 5)  # Wait for next 15m candle
 
 if __name__ == "__main__":
     run_bot()
