@@ -6,6 +6,7 @@ import pandas as pd
 from datetime import datetime
 
 # ========== CONFIGURATION ==========
+
 API_KEY = 'ea2551557fb8c4f4be4b4511b5ff13ddf1ecbb4baf0a13be7c22e8ece8529e4b'
 API_SECRET = 'c6d095fe75bf9405ce2c74e54c8402c02e5433dffe4fa5c45a8688284f8647db'
 BASE_URL = 'https://testnet.binancefuture.com'
@@ -13,14 +14,16 @@ TRADE_SYMBOL = 'BTCUSDT'
 INTERVAL = '5m'
 TRADE_USD = 1000
 LEVERAGE = 10
-TAKE_PROFIT_USD = 100
-STOP_LOSS_USD = -30
+TAKE_PROFIT_USD = 200
+STOP_LOSS_USD = -50
+
 
 # ===================================
 
 def get_server_time():
     res = requests.get(BASE_URL + "/fapi/v1/time")
     return res.json()['serverTime']
+
 
 def send_signed_request(http_method, url_path, payload={}):
     query_string = '&'.join([f"{k}={v}" for k, v in payload.items()])
@@ -31,6 +34,7 @@ def send_signed_request(http_method, url_path, payload={}):
     headers = {"X-MBX-APIKEY": API_KEY}
     response = requests.request(http_method, url, headers=headers)
     return response.json()
+
 
 def get_klines(symbol, interval, limit=100):
     url = f"{BASE_URL}/fapi/v1/klines"
@@ -44,6 +48,7 @@ def get_klines(symbol, interval, limit=100):
     df[['open', 'high', 'low', 'close']] = df[['open', 'high', 'low', 'close']].astype(float)
     return df
 
+
 def compute_heikin_ashi(df):
     ha_df = df.copy()
     ha_df['ha_close'] = (df['open'] + df['high'] + df['low'] + df['close']) / 4
@@ -55,36 +60,34 @@ def compute_heikin_ashi(df):
     ha_df['ha_low'] = ha_df[['low', 'ha_open', 'ha_close']].min(axis=1)
     return ha_df
 
+
 def detect_signal(df):
-    df['ema21'] = df['close'].ewm(span=21).mean()
-    df['ema55'] = df['close'].ewm(span=55).mean()
     ha_curr = df.iloc[-1]
     ha_prev = df.iloc[-2]
 
+    # Signal: Buy when current HA close > open and previous HA close < open (Bullish reversal)
     ha_color_change_up = ha_curr['ha_close'] > ha_curr['ha_open'] and ha_prev['ha_close'] < ha_prev['ha_open']
+
+    # Signal: Sell when current HA close < open and previous HA close > open (Bearish reversal)
     ha_color_change_down = ha_curr['ha_close'] < ha_curr['ha_open'] and ha_prev['ha_close'] > ha_prev['ha_open']
 
-    buy_condition = ((ha_curr['ema21'] > ha_curr['ema55'] and ha_color_change_up) or
-                     (ha_curr['ema21'] < ha_curr['ema55'] and ha_color_change_up))
-
-    sell_condition = ((ha_curr['ema21'] > ha_curr['ema55'] and ha_color_change_down) or
-                      (ha_curr['ema21'] < ha_curr['ema55'] and ha_color_change_down))
-
-    print(f"EMA21: {ha_curr['ema21']}, EMA55: {ha_curr['ema55']}")
     print(f"Ha Close: {ha_curr['ha_close']}, Ha Open: {ha_curr['ha_open']}")
     print(f"Previous Ha Close: {ha_prev['ha_close']}, Previous Ha Open: {ha_prev['ha_open']}")
-    print(f"Buy Signal: {buy_condition}, Sell Signal: {sell_condition}")
+    print(f"Buy Signal: {ha_color_change_up}, Sell Signal: {ha_color_change_down}")
 
-    return buy_condition, sell_condition
+    return ha_color_change_up, ha_color_change_down
+
 
 def get_price(symbol):
     res = requests.get(f"{BASE_URL}/fapi/v1/ticker/price", params={"symbol": symbol})
     return float(res.json()['price'])
 
+
 def set_leverage(symbol, leverage):
     payload = {'symbol': symbol, 'leverage': leverage}
     res = send_signed_request("POST", "/fapi/v1/leverage", payload)
     print("Leverage Set:", res)
+
 
 def get_position():
     res = send_signed_request("GET", "/fapi/v2/positionRisk")
@@ -94,6 +97,7 @@ def get_position():
             return amt
     return 0.0
 
+
 def get_unrealized_pnl():
     res = send_signed_request("GET", "/fapi/v2/positionRisk")
     for pos in res:
@@ -101,12 +105,14 @@ def get_unrealized_pnl():
             return float(pos['unRealizedProfit']), float(pos['positionAmt'])
     return 0.0, 0.0
 
+
 def close_position(position_amt):
     side = "SELL" if position_amt > 0 else "BUY"
     quantity = abs(position_amt)
     order = place_market_order(side, quantity)
     print(f"✅ Closed position: {side} {quantity}")
     return order
+
 
 def place_market_order(side, quantity):
     payload = {
@@ -119,10 +125,12 @@ def place_market_order(side, quantity):
     print(f"Order Placed ({side}):", res)
     return res
 
+
 def get_quantity_for_usd(symbol, usd_amount):
     price = get_price(symbol)
     qty = (usd_amount * LEVERAGE) / price
     return round(qty, 3)
+
 
 def run_bot():
     print("🤖 Starting Bot with 10x Leverage on Binance Futures Testnet")
@@ -179,7 +187,8 @@ def run_bot():
         except Exception as e:
             print("❌ Error:", e)
 
-        time.sleep(60 * 5)  # Wait for next 15m candle
+        time.sleep(60 * 5)  # Wait for next 5-minute candle
+
 
 if __name__ == "__main__":
     run_bot()
