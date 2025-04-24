@@ -12,10 +12,10 @@ API_SECRET = 'c6d095fe75bf9405ce2c74e54c8402c02e5433dffe4fa5c45a8688284f8647db'
 BASE_URL = 'https://testnet.binancefuture.com'
 TRADE_SYMBOL = 'BTCUSDT'
 INTERVAL = '5m'
-TRADE_USD = 1000
+TRADE_USD = 100
 LEVERAGE = 10
-TAKE_PROFIT_USD = 200
-STOP_LOSS_USD = -50
+TAKE_PROFIT_USD = 50
+STOP_LOSS_USD = -20
 
 
 # ===================================
@@ -62,20 +62,18 @@ def compute_heikin_ashi(df):
 
 
 def detect_signal(df):
-    ha_curr = df.iloc[-1]
-    ha_prev = df.iloc[-2]
+    # Use second-to-last and third-to-last rows for closed HA candles
+    ha_curr = df.iloc[-2]
+    ha_prev = df.iloc[-3]
 
-    # Signal: Buy when current HA close > open and previous HA close < open (Bullish reversal)
-    ha_color_change_up = ha_curr['ha_close'] > ha_curr['ha_open'] and ha_prev['ha_close'] < ha_prev['ha_open']
+    # Flip conditions (match Pine Script logic)
+    flip_up = ha_curr['ha_close'] > ha_curr['ha_open'] and ha_prev['ha_close'] < ha_prev['ha_open']
+    flip_down = ha_curr['ha_close'] < ha_curr['ha_open'] and ha_prev['ha_close'] > ha_prev['ha_open']
 
-    # Signal: Sell when current HA close < open and previous HA close > open (Bearish reversal)
-    ha_color_change_down = ha_curr['ha_close'] < ha_curr['ha_open'] and ha_prev['ha_close'] > ha_prev['ha_open']
+    print(f"[HA Flip Check] Current HA: ({ha_curr['ha_open']} -> {ha_curr['ha_close']}), Previous HA: ({ha_prev['ha_open']} -> {ha_prev['ha_close']})")
+    print(f"Signal - Buy: {flip_up}, Sell: {flip_down}")
 
-    print(f"Ha Close: {ha_curr['ha_close']}, Ha Open: {ha_curr['ha_open']}")
-    print(f"Previous Ha Close: {ha_prev['ha_close']}, Previous Ha Open: {ha_prev['ha_open']}")
-    print(f"Buy Signal: {ha_color_change_up}, Sell Signal: {ha_color_change_down}")
-
-    return ha_color_change_up, ha_color_change_down
+    return flip_up, flip_down
 
 
 def get_price(symbol):
@@ -161,25 +159,22 @@ def run_bot():
 
             if buy_signal:
                 print(f"{datetime.now()} >> Buy Signal Detected")
-                if position_amt < 0:
+                if position_amt < 0:  # In a short position
                     close_position(position_amt)
                     time.sleep(2)
-                    qty = get_quantity_for_usd(TRADE_SYMBOL, TRADE_USD)
-                    place_market_order("BUY", qty)
-                elif position_amt == 0:
+                if position_amt <= 0:  # Either closed short or was flat
                     qty = get_quantity_for_usd(TRADE_SYMBOL, TRADE_USD)
                     place_market_order("BUY", qty)
 
             elif sell_signal:
                 print(f"{datetime.now()} >> Sell Signal Detected")
-                if position_amt > 0:
+                if position_amt > 0:  # In a long position
                     close_position(position_amt)
                     time.sleep(2)
+                if position_amt >= 0:  # Either closed long or was flat
                     qty = get_quantity_for_usd(TRADE_SYMBOL, TRADE_USD)
                     place_market_order("SELL", qty)
-                elif position_amt == 0:
-                    qty = get_quantity_for_usd(TRADE_SYMBOL, TRADE_USD)
-                    place_market_order("SELL", qty)
+
 
             else:
                 print(f"{datetime.now()} >> No trade signal.")
